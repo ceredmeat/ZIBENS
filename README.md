@@ -1,4 +1,4 @@
-# ZIBENS 0.4 (Digitakt MKI, OS 1.54)
+# ZIBENS 0.6 (Digitakt MKI, OS 1.54)
 
 *Zibens* is Latvian for lightning. A drum-synth machine laid out like a four-voice drum synth:
 pick a voice, one of its three algorithms, shape it with two parameters, then decay, drive, a
@@ -57,7 +57,7 @@ away. Long hat decays on many tracks are the heaviest case.
 
 ## Install
 
-Load `zibens-0.4.elemod` in Elekloader with **core 4.4** and **machine-pages**, build your OS and
+Load `zibens-0.6.elemod` in Elekloader with **core 4.4** and **machine-pages**, build your OS and
 flash it. No `.syx` is shared here: it would contain Elektron's firmware.
 
 ## Notes
@@ -67,3 +67,10 @@ machine-pages machine with a second page, so on a ZIBENS track don't use FX Lock
 destinations. With DIGIWAVE and all the flexmods loaded, mod memory is at 251 of 256 KB.
 
 Licence: GPL-2.0-or-later. By Cere, made with Claude. Not affiliated with Erica Synths.
+
+## Changes
+
+| Version | What changed |
+|---|---|
+| 0.6 | Each track's delay memory is borrowed from the Digitakt's spare memory the first time the track plays ZIBENS, instead of from the mods' shared space: **32 KB freed** for your other mods. (If that memory ever runs out, a track just plays without its delay.) The DRIV, SEND, FDBK and COMP knobs show their values as numbers. |
+| 0.4 | First release. |

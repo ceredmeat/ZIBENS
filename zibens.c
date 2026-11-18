@@ -61,7 +61,28 @@ static struct zb {
     int32_t cenv, cgain;            /* follower Q15, gain Q12 */
     int32_t last;                   /* the last 24 kHz sample, to smooth from */
 } zb[8];
-static int8_t zb_dly[8][4096];
+/* 0.6: each track's delay memory is borrowed from the firmware's heap the first time the track plays
+ * ZIBENS (zb_tick, in the UI task), not kept in the mods' own RAM: 32 KB freed for the other mods.
+ * Until it comes (a few ms), or if the heap had none to give, that track plays without its delay. */
+static int8_t *volatile zb_dly[8];
+static volatile uint8_t zb_want;
+
+void zb_tick(void *ctrl)
+{
+    (void)ctrl;
+    for (int t = 0; t < 8; t++) {
+        if (!((zb_want >> t) & 1u) || zb_dly[t])
+            continue;
+        int8_t *p = (int8_t *)fw_op_new(4096);
+        if (!p) {
+            zb_want &= (uint8_t)~(1u << t);        /* the heap is full: no delay on this track */
+            continue;
+        }
+        for (int i = 0; i < 4096; i++)
+            p[i] = 0;
+        zb_dly[t] = p;
+    }
+}
 #define DLY_MASK 4095
 
 static inline int32_t sine(uint32_t ph) { return zb_sin[ph >> 22]; }
@@ -269,6 +290,8 @@ void zb_render(int32_t *blocks)
             continue;
         struct zb *s = &zb[t];
         int32_t *out = &blocks[32 * t];
+        if (!zb_dly[t])
+            zb_want |= (uint8_t)(1u << t);          /* ask the UI task for this track's delay memory */
         const volatile int16_t *p = &fw_voice_params[53 * t];
         int start = (fw_voice_start >> t) & 1;
         int32_t al = fw_amp_level[2 * t + 1];
@@ -339,8 +362,8 @@ void zb_render(int32_t *blocks)
             }
             buf[i] = v;
         }
-        if (send || s->dlive) {                                         /* the delay */
-            int8_t *dl = zb_dly[t];
+        int8_t *dl = zb_dly[t];
+        if ((send || s->dlive) && dl) {                                 /* the delay */
             int32_t dacc = s->dacc, dprev = s->dprev, dcur = s->dcur, dlp = s->dlp, sub = s->dsub;
             uint32_t dw = s->dw;
             for (int i = 0; i < HALF; i++) {
@@ -632,6 +655,18 @@ static int32_t draw_view(void *bmp, int32_t x, int32_t y, int32_t value, int32_t
     return 1;
 }
 
+static int32_t num_text(char *buf, int32_t value, int32_t ctx, int32_t m)    /* 0-127, as a number */
+{
+    int32_t v = (value >> 8) < 0 ? 0 : (value >> 8) > 127 ? 127 : (value >> 8), i = 0;
+    char d[4];
+    int n = 0;
+    (void)ctx; (void)m;
+    do { d[n++] = (char)('0' + v % 10); v /= 10; } while (v);
+    while (n) buf[i++] = d[--n];
+    buf[i] = 0;
+    return 1;
+}
+
 /* ---- the page ------------------------------------------------------------------------------------------- */
 
 #define KNOB(nm, ln, d, f) { .name = nm, .lname = ln, .look = 0x86, .flags = CM_RANGE | CM_DEFAULT, \
@@ -658,16 +693,16 @@ static const struct cm_ui32 zb_page = {
                          .fmt = prm1_text },
             [K_PRM2] = KNOB("PRM2", "Algorithm param 2", 64, prm2_text),
             [K_DEC] = DRAWN("DEC", "Decay", 60, dec_text, draw_dec),
-            [K_DRIV] = KNOB("DRIV", "Drive", 16, 0),
+            [K_DRIV] = KNOB("DRIV", "Drive", 16, num_text),
         },
     },
     .extra = {
         KNOB("PENV", "Pitch envelope", 50, penv_text),
         KNOB("PDEC", "Pitch env decay", 40, pdec_text),
-        KNOB("SEND", "Delay send", 0, 0),
+        KNOB("SEND", "Delay send", 0, num_text),
         KNOB("TIME", "Delay time", 60, time_knob_text),
-        KNOB("FDBK", "Delay feedback", 50, 0),
-        KNOB("COMP", "Compressor", 0, 0),
+        KNOB("FDBK", "Delay feedback", 50, num_text),
+        KNOB("COMP", "Compressor", 0, num_text),
         DRAWN("VIEW", "Envelope view", 40, view_text, draw_view),
     },
     .page_count = 2,

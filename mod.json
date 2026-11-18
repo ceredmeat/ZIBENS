@@ -1,6 +1,6 @@
 {
  "id": "zibens",
- "version": "0.4",
+ "version": "0.6",
  "title": "ZIBENS: drum-synth machine",
  "category": "Machines",
  "license": "GPL-2.0-or-later",
@@ -8,9 +8,32 @@
  "description": "ZIBENS (Latvian for lightning), a drum-synth SRC machine laid out like a four-voice drum synth: VOIC picks KICK, LOW, SNARE or HATS, ALGO one of three algorithms for it (808, FM, PNCH; TOM, RES, ZAP; SNR, CLAP, METL; HAT, NOIS, BIT), PRM1 and PRM2 its two parameters, then decay and drive. Page 2: pitch envelope and its decay, a gritty bucket-brigade-style delay (send, time up to 340 ms, feedback) and a compressor, with DEC again and VIEW, a picture of the envelopes. VOIC draws the drum it plays. Machine 34. Needs machine-pages 1.5 or newer and core 4.4.",
  "device": "digitakt-mk1",
  "os": "1.54",
- "sources": ["zibens.c"],
- "machines": [{"id": 34, "descriptor": "zb_machine"}],
- "subscribe": [{"event": "ev_render_voices", "fn": "zb_render", "order": 20}],
- "requires": ["core", "machine-pages"],
- "resources": {"core": "4.4"}
+ "sources": [
+  "zibens.c"
+ ],
+ "machines": [
+  {
+   "id": 34,
+   "descriptor": "zb_machine"
+  }
+ ],
+ "subscribe": [
+  {
+   "event": "ev_render_voices",
+   "fn": "zb_render",
+   "order": 20
+  },
+  {
+   "event": "ev_tick",
+   "fn": "zb_tick",
+   "order": 86
+  }
+ ],
+ "requires": [
+  "core",
+  "machine-pages"
+ ],
+ "resources": {
+  "core": "4.4"
+ }
 }
