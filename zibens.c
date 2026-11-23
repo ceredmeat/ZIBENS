@@ -413,6 +413,9 @@ void zb_render(int32_t *blocks)
 
 /* ---- the page: value texts --------------------------------------------------------------------------- */
 
+/* Everything from here on is the screen: built for size, to leave RAM for other mods. The sound code
+ * above is untouched. */
+#pragma GCC optimize ("Os", "no-tree-loop-distribute-patterns", "no-optimize-strlen")
 static int32_t put(char *buf, const char *s)
 {
     int i = 0;
